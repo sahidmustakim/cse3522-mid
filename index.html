@@ -58,6 +58,8 @@ input[type=text]:focus{border-color:var(--deep);outline:none}
 .btn.ghost:hover{border-color:var(--deep);background:#fff}
 .btn.small{padding:8px 14px;font-size:13.5px}
 .err{color:var(--warn);font-size:13.5px;margin:0 0 16px;min-height:20px}
+.prev{background:var(--butter);border-radius:11px;padding:14px 17px;margin:0 0 20px}
+.prev p{margin:0 0 10px;font-size:13.5px;color:#6B5216}
 
 /* ---------- reveal ---------- */
 .reveal{display:flex;gap:12px;margin:26px 0 4px;flex-wrap:wrap}
@@ -142,6 +144,7 @@ ol.steps code{font-family:var(--mono);font-size:13px;background:#F3F3FA;border-r
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .tip{border-radius:11px;padding:14px 17px;font-size:14px;margin-top:16px}
 .tip.butter{background:var(--butter)} .tip.blush{background:var(--blush)}
+.tip.mintish{background:var(--mint)}
 .explorer{display:grid;grid-template-columns:212px 1fr;gap:0;border:1px solid var(--rule);border-radius:12px;overflow:hidden}
 @media(max-width:760px){.explorer{grid-template-columns:1fr}}
 .tree{background:#F6F6FB;border-right:1px solid var(--rule);padding:14px 12px}
@@ -251,6 +254,7 @@ table.data td.key{color:var(--deep);font-weight:700}
     <div class="prog"><span id="pTxt">0 of 27</span><span class="bar"><i id="pBar"></i></span></div>
     <span class="saved" id="savedTag"></span>
     <button class="btn ghost small" id="exportBtn">Save a copy</button>
+    <button class="btn ghost small" id="finishBtn">Finish on this computer</button>
   </div></div>
 
   <div class="wrap">
@@ -587,6 +591,11 @@ function renderSetup(){
       Submit early; you can submit again as many times as you like before it closes,
       and only your latest attempt is marked.
     </div>
+    <div class="tip mintish">
+      Your typing is saved in this browser only, not on any server. On a lab or shared
+      computer, press <b>Finish on this computer</b> when you leave, or the next person
+      can open your answers.
+    </div>
     <div class="tip butter">
       Your numbers are yours. Salaries, weights, dates, phone numbers and tracking codes all come
       from ${S.id}. A query copied from someone else produces the wrong output on your screen, which
@@ -872,26 +881,46 @@ $("#exportBtn").addEventListener("click", exportSubmission);
 $("#exportBtn2").addEventListener("click", exportSubmission);
 $("#seedBtn2").addEventListener("click", downloadSeed);
 $("#submitBtn").addEventListener("click", submitToInstructor);
+$("#finishBtn").addEventListener("click", ()=>{
+  if(!confirm("Save a copy first, then clear your work from this browser?\n\nUse this on a lab or shared computer so the next person cannot open your answers.")) return;
+  exportSubmission(true);
+  wipeDevice();
+  setTimeout(()=>{ window.onbeforeunload=null; location.reload(); }, 900);
+});
 
 window.addEventListener("beforeunload",e=>{
+  if(wiping) return;
   if(S && Object.keys(ANS).length){ e.preventDefault(); e.returnValue=""; }
 });
 
-/* resume a previous session */
+/* A previous session may be saved in this browser. On a shared or lab computer that
+   is somebody else's work, so nothing about them is shown until they identify
+   themselves. Their name and ID are never pre-filled. */
 (function resume(){
-  const raw = load("dc_student");
-  if(!raw) return;
-  try{
-    const prev = JSON.parse(raw);
-    $("#nm").value = prev.name;
-    $("#s1").value = prev.id.slice(0,3);
-    $("#s2").value = prev.id.slice(3,6);
-    $("#s3").value = prev.id.slice(6,10);
-    $("#gerr").textContent = "";
-    $("#gerr").textContent = "";
-    $("#nm").insertAdjacentHTML("afterend",'<p style="font-size:13px;color:var(--mid);margin:8px 0 0">Answers saved on this computer for this ID will load automatically.</p>');
-  }catch(e){}
+  if(!load("dc_student")) return;
+  $("#revealBox").insertAdjacentHTML("beforebegin", `
+    <div class="prev">
+      <p><b>Unfinished work is saved in this browser.</b> If it is yours, enter your own ID
+         and your answers will load. If this is a shared or lab computer, clear it.</p>
+      <button class="btn ghost small" id="wipe">Clear saved work from this computer</button>
+    </div>`);
+  $("#wipe").addEventListener("click", ()=>{
+    if(!confirm("Delete all saved answers stored in this browser? This cannot be undone.")) return;
+    wipeDevice();
+    location.reload();
+  });
 })();
+
+let wiping = false;
+function wipeDevice(){
+  wiping = true;
+  try{
+    Object.keys(localStorage)
+      .filter(k => k === "dc_student" || k.indexOf("dc_answers_") === 0)
+      .forEach(k => localStorage.removeItem(k));
+  }catch(e){}
+}
+
 </script>
 </body>
 </html>
