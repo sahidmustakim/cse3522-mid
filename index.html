@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSE 3522 Assignment Console</title>
+<style>
+:root{
+  --ink:#2E3040; --deep:#454A85; --mid:#6E72A8; --muted:#83849B;
+  --page:#FBFBFE; --panel:#FFFFFF; --rule:#E4E4EF;
+  --lav:#E8E6F7; --sky:#DCE9F7; --mint:#DAEDE3; --blush:#FBE2E6; --butter:#FBEFD3;
+  --ok:#3F8168; --warn:#A8465C;
+  --serif: "Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2.5px solid var(--deep); outline-offset:2px; border-radius:3px}
+
+/* ---------- gate ---------- */
+#gate{min-height:100vh;display:grid;place-items:center;padding:32px 20px}
+.gatecard{
+  width:min(660px,100%); background:var(--panel); border:1px solid var(--rule);
+  border-radius:18px; padding:44px 44px 38px;
+}
+.course{font-family:var(--mono);font-size:12.5px;letter-spacing:.5px;color:var(--mid);margin:0 0 6px}
+.gatecard h1{font-family:var(--serif);font-size:34px;line-height:1.15;margin:0 0 10px;color:var(--ink);font-weight:600}
+.lede{margin:0 0 30px;color:var(--muted);max-width:52ch}
+label{display:block;font-size:13px;color:var(--mid);margin-bottom:7px}
+.field{margin-bottom:22px}
+input[type=text]{
+  font:inherit;width:100%;padding:11px 13px;border:1.5px solid var(--rule);
+  border-radius:9px;background:#fff;color:var(--ink)
+}
+input[type=text]:focus{border-color:var(--deep);outline:none}
+.segrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.seg{flex:0 0 auto}
+.seg input{
+  font-family:var(--mono);font-size:22px;text-align:center;letter-spacing:5px;
+  padding:11px 8px;border:1.5px solid var(--rule);border-radius:9px;background:#fff;color:var(--ink);
+}
+.seg .w3{width:104px} .seg .w4{width:132px}
+.seg small{display:block;font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center}
+.dash{font-family:var(--mono);color:var(--rule);font-size:22px;padding-bottom:30px}
+.btn{
+  border:none;border-radius:10px;padding:12px 22px;font-size:15px;font-weight:600;
+  background:var(--deep);color:#fff
+}
+.btn:hover{background:#383D75}
+.btn.ghost{background:transparent;color:var(--deep);border:1.5px solid var(--rule);font-weight:500}
+.btn.ghost:hover{border-color:var(--deep);background:#fff}
+.btn.small{padding:8px 14px;font-size:13.5px}
+.err{color:var(--warn);font-size:13.5px;margin:0 0 16px;min-height:20px}
+
+/* ---------- reveal ---------- */
+.reveal{display:flex;gap:12px;margin:26px 0 4px;flex-wrap:wrap}
+.pcell{
+  flex:1 1 108px;border-radius:12px;padding:14px 16px;
+  opacity:0;transform:translateY(8px);
+}
+.pcell.show{animation:rise .42s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.pcell{opacity:1;transform:none}.pcell.show{animation:none}}
+.pcell b{display:block;font-family:var(--serif);font-size:26px;line-height:1;color:var(--deep)}
+.pcell span{display:block;font-size:12px;color:var(--mid);margin-top:5px}
+.pcell em{display:block;font-family:var(--mono);font-size:19px;font-style:normal;margin-top:9px;color:var(--ink)}
+
+/* ---------- app shell ---------- */
+#app{display:none}
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(251,251,254,.94);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);
+}
+.topin{max-width:1180px;margin:0 auto;padding:12px 24px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.who{min-width:0}
+.who strong{display:block;font-size:15px;line-height:1.2}
+.who span{font-family:var(--mono);font-size:12.5px;color:var(--mid)}
+.params{display:flex;gap:7px}
+.pk{font-family:var(--mono);font-size:12.5px;background:var(--lav);color:var(--deep);border-radius:7px;padding:4px 9px}
+.spacer{flex:1}
+.prog{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--mid)}
+.bar{width:118px;height:7px;border-radius:4px;background:var(--rule);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.saved{font-size:12.5px;color:var(--ok);min-width:74px}
+.clock{font-size:13px;color:var(--mid);white-space:nowrap;border-radius:8px;padding:5px 10px;background:var(--lav)}
+.clock b{font-variant-numeric:tabular-nums;color:var(--deep)}
+.clock.soon{background:var(--butter)} .clock.soon b{color:#8A6314}
+.clock.urgent{background:var(--blush)} .clock.urgent b{color:#8A3346}
+.clock.shut{background:var(--blush)} .clock.shut b{color:#8A3346}
+
+.wrap{max-width:1180px;margin:0 auto;padding:26px 24px 90px;display:grid;grid-template-columns:186px 1fr;gap:30px}
+@media(max-width:880px){.wrap{grid-template-columns:1fr;padding-top:18px}.rail{position:static!important;display:none}}
+
+.rail{position:sticky;top:86px;align-self:start}
+.railpart{margin-bottom:16px}
+.railpart h4{margin:0 0 7px;font-size:12.5px;color:var(--mid);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  width:34px;height:28px;border-radius:7px;border:1.5px solid var(--rule);background:#fff;
+  font-family:var(--mono);font-size:11.5px;color:var(--mid);display:grid;place-items:center;padding:0
+}
+.chip.done{background:var(--mint);border-color:#BFDFCF;color:#2F5D4A}
+.chip:hover{border-color:var(--deep)}
+
+section.block{margin-bottom:34px}
+h2.part{
+  font-family:var(--serif);font-size:23px;font-weight:600;margin:0 0 4px;color:var(--ink)
+}
+.partmeta{font-size:13.5px;color:var(--muted);margin:0 0 16px}
+.q{border:1px solid var(--rule);border-radius:13px;background:var(--panel);margin-bottom:12px;overflow:hidden}
+.qhead{display:flex;gap:13px;padding:15px 17px 0}
+.qid{
+  font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--deep);
+  border-radius:6px;padding:3px 8px;height:fit-content;white-space:nowrap
+}
+.qtext{flex:1;font-size:14.5px;max-width:74ch}
+.qtext code{font-family:var(--mono);font-size:13px;background:#F3F3FA;border-radius:4px;padding:1px 5px}
+.qmk{font-size:13px;color:var(--muted);white-space:nowrap}
+.qnote{margin:8px 0 0;font-size:13.5px;color:var(--deep)}
+.qbody{padding:12px 17px 16px}
+textarea{
+  width:100%;min-height:96px;resize:vertical;font-family:var(--mono);font-size:13.5px;
+  line-height:1.6;padding:12px 13px;border:1.5px solid var(--rule);border-radius:9px;background:#FDFDFF;color:var(--ink)
+}
+textarea:focus{border-color:var(--deep);outline:none;background:#fff}
+.explain{margin-top:9px}
+.explain textarea{min-height:60px;font-family:var(--sans);font-size:14px}
+
+.panel{border:1px solid var(--rule);border-radius:14px;background:var(--panel);padding:24px 26px;margin-bottom:26px}
+.panel h3{font-family:var(--serif);font-size:20px;margin:0 0 10px;font-weight:600}
+.panel p{margin:0 0 12px;max-width:74ch;color:#4A4C60}
+ol.steps{margin:0;padding-left:20px;max-width:74ch}
+ol.steps li{margin-bottom:9px}
+ol.steps code{font-family:var(--mono);font-size:13px;background:#F3F3FA;border-radius:4px;padding:1px 5px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.tip{border-radius:11px;padding:14px 17px;font-size:14px;margin-top:16px}
+.tip.butter{background:var(--butter)} .tip.blush{background:var(--blush)}
+
+.dock{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(8px);border-top:1px solid var(--rule)
+}
+.dockin{max-width:1180px;margin:0 auto;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.dockin p{margin:0;font-size:13.5px;color:var(--muted);flex:1;min-width:200px}
+.banner{background:var(--blush);color:#7A3346;font-size:13.5px;padding:9px 24px;text-align:center}
+.receipt{background:var(--mint);border:1px solid #BFDFCF;border-radius:12px;padding:18px 20px;margin-bottom:22px}
+.receipt h3{margin:0 0 6px;font-family:var(--serif);font-size:19px;font-weight:600;color:#2F5D4A}
+.receipt p{margin:0 0 8px;color:#3B5C4E;max-width:70ch}
+.code{font-family:var(--mono);font-size:26px;letter-spacing:2px;color:#2F5D4A;display:block;margin:6px 0 10px}
+</style>
+</head>
+<body>
+
+<!-- ============ GATE ============ -->
+<div id="gate">
+  <div class="gatecard">
+    <p class="course">CSE 3522 &nbsp;/&nbsp; Database Management Systems Laboratory &nbsp;/&nbsp; Mid-term</p>
+    <h1>The DrutoCourier assignment</h1>
+    <p class="lede">Your database is built from your student ID, so no two students get the same
+      numbers. Enter your ID to generate your copy.</p>
+
+    <div class="field">
+      <label for="nm">Full name</label>
+      <input type="text" id="nm" autocomplete="name" placeholder="As it appears on the class roll">
+    </div>
+
+    <div class="field">
+      <label>Student ID</label>
+      <div class="segrow">
+        <div class="seg"><input class="w3" id="s1" inputmode="numeric" maxlength="3" value="011"><small>department</small></div>
+        <span class="dash">·</span>
+        <div class="seg"><input class="w3" id="s2" inputmode="numeric" maxlength="3" placeholder="223"><small>admission term</small></div>
+        <span class="dash">·</span>
+        <div class="seg"><input class="w4" id="s3" inputmode="numeric" maxlength="4" placeholder="0123"><small>your roll</small></div>
+      </div>
+    </div>
+
+    <p class="err" id="gerr"></p>
+    <div id="revealBox"></div>
+    <div class="actions">
+      <button class="btn" id="go">Build my assignment</button>
+      <button class="btn ghost small" id="clr" style="display:none">Start over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div id="storeWarn" class="banner" style="display:none">
+    Autosave is off here. Download this page and open it from your own computer, or your typing will not be kept.
+  </div>
+
+  <div class="topbar"><div class="topin">
+    <div class="who"><strong id="tName">—</strong><span id="tId">—</span></div>
+    <div class="params" id="tParams"></div>
+    <div class="spacer"></div>
+    <span class="clock" id="clock"></span>
+    <div class="prog"><span id="pTxt">0 of 27</span><span class="bar"><i id="pBar"></i></span></div>
+    <span class="saved" id="savedTag"></span>
+    <button class="btn ghost small" id="exportBtn">Save a copy</button>
+  </div></div>
+
+  <div class="wrap">
+    <nav class="rail" id="rail" aria-label="Questions"></nav>
+    <main id="main"></main>
+  </div>
+
+  <div class="dock"><div class="dockin">
+    <p id="dockMsg">Answer every box, then submit.</p>
+    <button class="btn ghost small" id="seedBtn2">Download starter SQL</button>
+    <button class="btn ghost small" id="exportBtn2">Save a copy</button>
+    <button class="btn small" id="submitBtn" style="display:none">Submit to instructor</button>
+  </div></div>
+</div>
+
+<script type="application/json" id="seedjson">"-- =====================================================================\n--  CSE 3522 - Database Management Systems Laboratory\n--  United International University\n--  MID-TERM ASSIGNMENT  |  Marks: 20\n--\n--  FILE: 01_DrutoCourier_Seed.sql\n--  PURPOSE: Builds the \"DrutoCourier\" database on your machine.\n--\n--  READ THIS BEFORE YOU RUN ANYTHING\n--  ---------------------------------------------------------------\n--  Every row of data in this file is generated FROM YOUR STUDENT ID.\n--  Two students will never get the same numbers, the same dates or\n--  the same tracking codes. A query that is not run on YOUR data\n--  will produce the wrong output, and that question scores zero.\n-- =====================================================================\n\n\n-- ---------------------------------------------------------------------\n-- STEP 1.  Create your own database.\n--          Replace 0123 with the LAST FOUR DIGITS of your student ID.\n--          Example: ID 0112230123  ->  dc_0123\n-- ---------------------------------------------------------------------\n-- CREATE DATABASE dc_0123;\n-- USE dc_0123;\n\n-- Uncomment the two lines above, edit them, run them, THEN continue.\n\n\n-- ---------------------------------------------------------------------\n-- STEP 2.  Put your own student ID inside the quotes below.\n--          It must be the full 10-digit ID. Nothing else changes.\n-- ---------------------------------------------------------------------\nSET @SID = '0112230123';        -- <<<<<<  EDIT THIS LINE. THIS LINE ONLY.\n\n\n-- ---------------------------------------------------------------------\n-- STEP 3.  Your personal parameters. Do not edit anything below.\n--          @P = last TWO digits of your ID\n--          @Q = last ONE digit of your ID\n--          @R = (@Q mod 3) + 2\n--          @T = sum of the last FOUR digits of your ID\n-- ---------------------------------------------------------------------\nSET @P = CAST(SUBSTRING(@SID, 9, 2) AS UNSIGNED);\nSET @Q = CAST(SUBSTRING(@SID, 10, 1) AS UNSIGNED);\nSET @R = (@Q MOD 3) + 2;\nSET @T = CAST(SUBSTRING(@SID,7,1) AS UNSIGNED)\n       + CAST(SUBSTRING(@SID,8,1) AS UNSIGNED)\n       + CAST(SUBSTRING(@SID,9,1) AS UNSIGNED)\n       + CAST(SUBSTRING(@SID,10,1) AS UNSIGNED);\nSET @U = RIGHT(@SID, 4);        -- last four digits, kept as text\n\nSELECT @SID AS student_id, @P AS P, @Q AS Q, @R AS R, @T AS T;\n\n\n-- =====================================================================\n--  SCHEMA\n-- =====================================================================\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS parcel;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS staff;\nDROP TABLE IF EXISTS branch;\n\nCREATE TABLE branch (\n    branch_id     INT PRIMARY KEY,\n    branch_name   VARCHAR(50)  NOT NULL,\n    city          VARCHAR(30)  NOT NULL,\n    region        VARCHAR(30)  NOT NULL,\n    opened_on     DATE         NOT NULL,\n    monthly_rent  DECIMAL(10,2)\n);\n\nCREATE TABLE staff (\n    staff_id      INT PRIMARY KEY,\n    full_name     VARCHAR(60)  NOT NULL,\n    role          VARCHAR(30)  NOT NULL,\n    hired_on      DATE         NOT NULL,\n    salary        DECIMAL(10,2) NOT NULL,\n    bonus_pct     DECIMAL(4,2)  NULL,\n    branch_id     INT,\n    supervisor_id INT NULL,\n    CONSTRAINT fk_staff_branch     FOREIGN KEY (branch_id)     REFERENCES branch(branch_id),\n    CONSTRAINT fk_staff_supervisor FOREIGN KEY (supervisor_id) REFERENCES staff(staff_id)\n);\n\nCREATE TABLE customer (\n    customer_id   INT PRIMARY KEY,\n    cust_name     VARCHAR(60) NOT NULL,\n    phone         VARCHAR(15),\n    city          VARCHAR(30),\n    cust_type     VARCHAR(15),\n    joined_on     DATE,\n    referred_by   INT NULL,\n    CONSTRAINT fk_cust_referrer FOREIGN KEY (referred_by) REFERENCES customer(customer_id)\n);\n\nCREATE TABLE parcel (\n    parcel_id      INT PRIMARY KEY,\n    tracking_code  VARCHAR(20) NOT NULL UNIQUE,\n    customer_id    INT NOT NULL,\n    origin_branch  INT NOT NULL,\n    dest_branch    INT NOT NULL,\n    weight_kg      DECIMAL(6,2) NOT NULL,\n    declared_value DECIMAL(10,2),\n    service_type   VARCHAR(15),\n    booked_on      DATE NOT NULL,\n    delivered_on   DATE NULL,\n    status         VARCHAR(15),\n    handled_by     INT NULL,\n    CONSTRAINT fk_par_cust   FOREIGN KEY (customer_id)   REFERENCES customer(customer_id),\n    CONSTRAINT fk_par_origin FOREIGN KEY (origin_branch) REFERENCES branch(branch_id),\n    CONSTRAINT fk_par_dest   FOREIGN KEY (dest_branch)   REFERENCES branch(branch_id),\n    CONSTRAINT fk_par_staff  FOREIGN KEY (handled_by)    REFERENCES staff(staff_id)\n);\n\nCREATE TABLE payment (\n    payment_id  INT PRIMARY KEY,\n    parcel_id   INT NOT NULL,\n    amount      DECIMAL(10,2) NOT NULL,\n    paid_on     DATE NOT NULL,\n    method      VARCHAR(20),\n    CONSTRAINT fk_pay_parcel FOREIGN KEY (parcel_id) REFERENCES parcel(parcel_id)\n);\n\n\n-- =====================================================================\n--  DATA  (every value is shifted by your own @P / @Q)\n-- =====================================================================\n\nINSERT INTO branch (branch_id, branch_name, city, region, opened_on, monthly_rent) VALUES\n(1,'Motijheel Hub',    'Dhaka',      'Central',    DATE_ADD('2017-02-15', INTERVAL @P DAY), 85000 + @P*250),\n(2,'Uttara Hub',       'Dhaka',      'Central',    DATE_ADD('2018-06-01', INTERVAL @P DAY), 72000 + @P*250),\n(3,'Agrabad Hub',      'Chattogram', 'South-East', DATE_ADD('2019-03-20', INTERVAL @P DAY), 64000 + @P*250),\n(4,'Zindabazar Hub',   'Sylhet',     'North-East', DATE_ADD('2020-09-05', INTERVAL @P DAY), 51000 + @P*250),\n(5,'Shaheb Bazar Hub', 'Rajshahi',   'North-West', DATE_ADD('2021-11-11', INTERVAL @P DAY), 43000 + @P*250),\n(6,'Sonadanga Hub',    'Khulna',     'South-West', DATE_ADD('2022-04-25', INTERVAL @P DAY), 39000 + @P*250);\n\n\nINSERT INTO staff (staff_id, full_name, role, hired_on, salary, bonus_pct, branch_id, supervisor_id) VALUES\n(101,'Rezaul Karim',   'Operations Head',  DATE_ADD('2017-03-01', INTERVAL @P DAY), 92000 + @P*120, NULL, 1, NULL),\n(102,'Nusrat Jahan',   'Branch Manager',   DATE_ADD('2017-08-15', INTERVAL @P DAY), 68000 + @P*120, 5.00, 1, 101),\n(103,'Tanvir Ahmed',   'Branch Manager',   DATE_ADD('2018-07-10', INTERVAL @P DAY), 66000 + @P*120, 5.00, 2, 101),\n(104,'Farhana Yasmin', 'Branch Manager',   DATE_ADD('2019-04-02', INTERVAL @P DAY), 64000 + @P*120, 4.50, 3, 101),\n(105,'Shamim Reza',    'Branch Manager',   DATE_ADD('2020-10-19', INTERVAL @P DAY), 59000 + @P*120, NULL, 4, 101),\n(106,'Ayesha Siddika', 'Dispatch Officer', DATE_ADD('2019-01-21', INTERVAL @P DAY), 41000 + @P*120, 2.50, 1, 102),\n(107,'Mahmudul Hasan', 'Rider',            DATE_ADD('2020-02-14', INTERVAL @P DAY), 27000 + @P*120, 3.00, 1, 106),\n(108,'Sabbir Rahman',  'Rider',            DATE_ADD('2021-05-30', INTERVAL @P DAY), 25500 + @P*120, NULL, 1, 106),\n(109,'Ishrat Nabila',  'Dispatch Officer', DATE_ADD('2020-08-08', INTERVAL @P DAY), 39500 + @P*120, 2.50, 2, 103),\n(110,'Rakibul Islam',  'Rider',            DATE_ADD('2021-09-12', INTERVAL @P DAY), 26000 + @P*120, 3.00, 2, 109),\n(111,'Sadia Afrin',    'Customer Care',    DATE_ADD('2021-12-01', INTERVAL @P DAY), 32000 + @P*120, NULL, 3, 104),\n(112,'Jubayer Alam',   'Rider',            DATE_ADD('2022-03-17', INTERVAL @P DAY), 24500 + @P*120, 2.00, 3, 104),\n(113,'Mitu Chowdhury', 'Customer Care',    DATE_ADD('2022-07-23', INTERVAL @P DAY), 31000 + @P*120, NULL, 4, 105),\n(114,'Arifur Rahman',  'Rider',            DATE_ADD('2023-01-09', INTERVAL @P DAY), 24000 + @P*120, 2.00, 5, NULL);\n\n\nINSERT INTO customer (customer_id, cust_name, phone, city, cust_type, joined_on, referred_by) VALUES\n(201,'Hasibul Haque', CONCAT('017',@U,'0001'),'Dhaka',     'Corporate', DATE_ADD('2020-01-15', INTERVAL @P DAY), NULL),\n(202,'Farzana Akter', CONCAT('018',@U,'0002'),'Dhaka',     'Retail',    DATE_ADD('2020-05-20', INTERVAL @P DAY), 201),\n(203,'Imran Kabir',   CONCAT('019',@U,'0003'),'Chattogram','Corporate', DATE_ADD('2021-02-11', INTERVAL @P DAY), NULL),\n(204,'Sumaiya Islam', CONCAT('017',@U,'0004'),'Sylhet',    'Retail',    DATE_ADD('2021-06-30', INTERVAL @P DAY), 201),\n(205,'Nazmul Huda',   CONCAT('016',@U,'0005'),'Dhaka',     'Retail',    DATE_ADD('2021-09-14', INTERVAL @P DAY), 202),\n(206,'Tania Rahman',  CONCAT('018',@U,'0006'),'Rajshahi',  'Corporate', DATE_ADD('2022-01-05', INTERVAL @P DAY), NULL),\n(207,'Shafiqul Alam', CONCAT('017',@U,'0007'),'Khulna',    'Retail',    DATE_ADD('2022-03-22', INTERVAL @P DAY), 203),\n(208,'Mehjabin Noor', CONCAT('019',@U,'0008'),'Chattogram','Retail',    DATE_ADD('2022-08-08', INTERVAL @P DAY), 203),\n(209,'Rashed Khan',   CONCAT('017',@U,'0009'),'Dhaka',     'Corporate', DATE_ADD('2023-02-17', INTERVAL @P DAY), NULL),\n(210,'Lubna Ferdous', CONCAT('018',@U,'0010'),'Sylhet',    'Retail',    DATE_ADD('2023-05-25', INTERVAL @P DAY), 204),\n(211,'Omar Faruk',    CONCAT('016',@U,'0011'),'Dhaka',     'Retail',    DATE_ADD('2023-10-02', INTERVAL @P DAY), NULL),\n(212,'Nabila Haque',  CONCAT('017',@U,'0012'),'Bogura',    'Corporate', DATE_ADD('2024-01-19', INTERVAL @P DAY), NULL);\n\n\nINSERT INTO parcel (parcel_id, tracking_code, customer_id, origin_branch, dest_branch,\n                    weight_kg, declared_value, service_type, booked_on, delivered_on, status, handled_by) VALUES\n( 1, CONCAT('DC',@U,'-001'), 201, 1, 3,  2.50 + @Q*0.30,  4500 + @P*40, 'Express',  DATE_ADD('2024-01-05', INTERVAL @P DAY), DATE_ADD('2024-01-08', INTERVAL @P DAY), 'Delivered',  107),\n( 2, CONCAT('DC',@U,'-002'), 201, 1, 2,  1.20 + @Q*0.30,  1800 + @P*40, 'Standard', DATE_ADD('2024-01-09', INTERVAL @P DAY), DATE_ADD('2024-01-13', INTERVAL @P DAY), 'Delivered',  108),\n( 3, CONCAT('DC',@U,'-003'), 202, 2, 4,  5.00 + @Q*0.30,  9000 + @P*40, 'Express',  DATE_ADD('2024-01-12', INTERVAL @P DAY), DATE_ADD('2024-01-15', INTERVAL @P DAY), 'Delivered',  110),\n( 4, CONCAT('DC',@U,'-004'), 203, 3, 1,  0.80 + @Q*0.30,  1200 + @P*40, 'Economy',  DATE_ADD('2024-01-18', INTERVAL @P DAY), NULL,                                    'Returned',   112),\n( 5, CONCAT('DC',@U,'-005'), 204, 4, 1,  3.40 + @Q*0.30,  6200 + @P*40, 'Standard', DATE_ADD('2024-01-22', INTERVAL @P DAY), DATE_ADD('2024-01-28', INTERVAL @P DAY), 'Delivered',  NULL),\n( 6, CONCAT('DC',@U,'-006'), 205, 1, 1,  1.00 + @Q*0.30,   900 + @P*40, 'Economy',  DATE_ADD('2024-02-02', INTERVAL @P DAY), DATE_ADD('2024-02-03', INTERVAL @P DAY), 'Delivered',  107),\n( 7, CONCAT('DC',@U,'-007'), 201, 1, 5,  7.50 + @Q*0.30, 15000 + @P*40, 'Express',  DATE_ADD('2024-02-06', INTERVAL @P DAY), DATE_ADD('2024-02-11', INTERVAL @P DAY), 'Delivered',  108),\n( 8, CONCAT('DC',@U,'-008'), 206, 5, 1,  2.20 + @Q*0.30,  3300 + @P*40, 'Standard', DATE_ADD('2024-02-11', INTERVAL @P DAY), DATE_ADD('2024-02-16', INTERVAL @P DAY), 'Delivered',  114),\n( 9, CONCAT('DC',@U,'-009'), 203, 3, 6,  4.10 + @Q*0.30,  7700 + @P*40, 'Express',  DATE_ADD('2024-02-15', INTERVAL @P DAY), NULL,                                    'In Transit', 112),\n(10, CONCAT('DC',@U,'-010'), 207, 6, 3,  1.70 + @Q*0.30,  2100 + @P*40, 'Standard', DATE_ADD('2024-02-20', INTERVAL @P DAY), DATE_ADD('2024-02-25', INTERVAL @P DAY), 'Delivered',  NULL),\n(11, CONCAT('DC',@U,'-011'), 202, 2, 2,  0.50 + @Q*0.30,   600 + @P*40, 'Economy',  DATE_ADD('2024-02-24', INTERVAL @P DAY), DATE_ADD('2024-02-25', INTERVAL @P DAY), 'Delivered',  110),\n(12, CONCAT('DC',@U,'-012'), 208, 3, 2,  9.30 + @Q*0.30, 21000 + @P*40, 'Express',  DATE_ADD('2024-03-01', INTERVAL @P DAY), DATE_ADD('2024-03-04', INTERVAL @P DAY), 'Delivered',  112),\n(13, CONCAT('DC',@U,'-013'), 209, 1, 4,  2.80 + @Q*0.30,  5100 + @P*40, 'Standard', DATE_ADD('2024-03-05', INTERVAL @P DAY), NULL,                                    'Pending',    NULL),\n(14, CONCAT('DC',@U,'-014'), 204, 4, 3,  6.60 + @Q*0.30, 11500 + @P*40, 'Express',  DATE_ADD('2024-03-09', INTERVAL @P DAY), DATE_ADD('2024-03-13', INTERVAL @P DAY), 'Delivered',  NULL),\n(15, CONCAT('DC',@U,'-015'), 210, 4, 1,  1.40 + @Q*0.30,  1700 + @P*40, 'Economy',  DATE_ADD('2024-03-14', INTERVAL @P DAY), DATE_ADD('2024-03-20', INTERVAL @P DAY), 'Delivered',  NULL),\n(16, CONCAT('DC',@U,'-016'), 205, 1, 6,  3.90 + @Q*0.30,  4900 + @P*40, 'Standard', DATE_ADD('2024-03-18', INTERVAL @P DAY), NULL,                                    'In Transit', 107),\n(17, CONCAT('DC',@U,'-017'), 209, 1, 3, 12.00 + @Q*0.30, 26000 + @P*40, 'Express',  DATE_ADD('2024-03-22', INTERVAL @P DAY), DATE_ADD('2024-03-25', INTERVAL @P DAY), 'Delivered',  108),\n(18, CONCAT('DC',@U,'-018'), 206, 5, 2,  2.00 + @Q*0.30,  2600 + @P*40, 'Standard', DATE_ADD('2024-03-27', INTERVAL @P DAY), DATE_ADD('2024-04-01', INTERVAL @P DAY), 'Delivered',  114),\n(19, CONCAT('DC',@U,'-019'), 201, 1, 4,  0.90 + @Q*0.30,  1100 + @P*40, 'Economy',  DATE_ADD('2024-04-02', INTERVAL @P DAY), DATE_ADD('2024-04-07', INTERVAL @P DAY), 'Delivered',  107),\n(20, CONCAT('DC',@U,'-020'), 208, 3, 3,  5.50 + @Q*0.30,  8800 + @P*40, 'Standard', DATE_ADD('2024-04-06', INTERVAL @P DAY), DATE_ADD('2024-04-08', INTERVAL @P DAY), 'Delivered',  112),\n(21, CONCAT('DC',@U,'-021'), 207, 6, 1,  3.10 + @Q*0.30,  4200 + @P*40, 'Express',  DATE_ADD('2024-04-11', INTERVAL @P DAY), NULL,                                    'In Transit', NULL),\n(22, CONCAT('DC',@U,'-022'), 203, 3, 5,  8.70 + @Q*0.30, 17400 + @P*40, 'Express',  DATE_ADD('2024-04-15', INTERVAL @P DAY), DATE_ADD('2024-04-19', INTERVAL @P DAY), 'Delivered',  112),\n(23, CONCAT('DC',@U,'-023'), 210, 4, 6,  1.10 + @Q*0.30,  1300 + @P*40, 'Economy',  DATE_ADD('2024-04-20', INTERVAL @P DAY), NULL,                                    'Pending',    NULL),\n(24, CONCAT('DC',@U,'-024'), 202, 2, 1,  4.60 + @Q*0.30,  6800 + @P*40, 'Standard', DATE_ADD('2024-04-24', INTERVAL @P DAY), DATE_ADD('2024-04-28', INTERVAL @P DAY), 'Delivered',  110),\n(25, CONCAT('DC',@U,'-025'), 209, 1, 2,  2.30 + @Q*0.30,  3500 + @P*40, 'Express',  DATE_ADD('2024-04-29', INTERVAL @P DAY), DATE_ADD('2024-05-01', INTERVAL @P DAY), 'Delivered',  108),\n(26, CONCAT('DC',@U,'-026'), 205, 1, 5,  6.00 + @Q*0.30,  9600 + @P*40, 'Standard', DATE_ADD('2024-05-03', INTERVAL @P DAY), NULL,                                    'Returned',   107),\n(27, CONCAT('DC',@U,'-027'), 206, 5, 6,  1.90 + @Q*0.30,  2400 + @P*40, 'Economy',  DATE_ADD('2024-05-08', INTERVAL @P DAY), DATE_ADD('2024-05-14', INTERVAL @P DAY), 'Delivered',  114),\n(28, CONCAT('DC',@U,'-028'), 204, 4, 2, 10.50 + @Q*0.30, 23000 + @P*40, 'Express',  DATE_ADD('2024-05-12', INTERVAL @P DAY), DATE_ADD('2024-05-15', INTERVAL @P DAY), 'Delivered',  NULL);\n\n\nINSERT INTO payment (payment_id, parcel_id, amount, paid_on, method) VALUES\n(301,  1,  260 + @P*10, DATE_ADD('2024-01-05', INTERVAL @P DAY), 'bKash'),\n(302,  2,  150 + @P*10, DATE_ADD('2024-01-09', INTERVAL @P DAY), 'Cash'),\n(303,  3,  480 + @P*10, DATE_ADD('2024-01-12', INTERVAL @P DAY), 'Card'),\n(304,  5,  340 + @P*10, DATE_ADD('2024-01-23', INTERVAL @P DAY), 'bKash'),\n(305,  6,  110 + @P*10, DATE_ADD('2024-02-02', INTERVAL @P DAY), 'Cash'),\n(306,  7,  700 + @P*10, DATE_ADD('2024-02-06', INTERVAL @P DAY), 'Card'),\n(307,  8,  230 + @P*10, DATE_ADD('2024-02-12', INTERVAL @P DAY), 'Nagad'),\n(308, 10,  180 + @P*10, DATE_ADD('2024-02-20', INTERVAL @P DAY), 'bKash'),\n(309, 11,   90 + @P*10, DATE_ADD('2024-02-24', INTERVAL @P DAY), 'Cash'),\n(310, 12,  890 + @P*10, DATE_ADD('2024-03-01', INTERVAL @P DAY), 'Card'),\n(311, 14,  640 + @P*10, DATE_ADD('2024-03-09', INTERVAL @P DAY), 'bKash'),\n(312, 15,  160 + @P*10, DATE_ADD('2024-03-14', INTERVAL @P DAY), 'Nagad'),\n(313, 17, 1150 + @P*10, DATE_ADD('2024-03-22', INTERVAL @P DAY), 'Card'),\n(314, 18,  210 + @P*10, DATE_ADD('2024-03-27', INTERVAL @P DAY), 'bKash'),\n(315, 19,  100 + @P*10, DATE_ADD('2024-04-02', INTERVAL @P DAY), 'Cash'),\n(316, 20,  530 + @P*10, DATE_ADD('2024-04-06', INTERVAL @P DAY), 'Nagad'),\n(317, 22,  820 + @P*10, DATE_ADD('2024-04-15', INTERVAL @P DAY), 'Card'),\n(318, 24,  440 + @P*10, DATE_ADD('2024-04-24', INTERVAL @P DAY), 'bKash'),\n(319, 25,  250 + @P*10, DATE_ADD('2024-04-29', INTERVAL @P DAY), 'Rocket'),\n(320, 28,  990 + @P*10, DATE_ADD('2024-05-12', INTERVAL @P DAY), 'Card');\n\n\n-- =====================================================================\n--  SANITY CHECK. Expected: 6, 14, 12, 28, 20.\n--  If any count is different, drop the database and start again.\n-- =====================================================================\nSELECT 'branch' AS table_name, COUNT(*) AS rows_loaded FROM branch\nUNION ALL SELECT 'staff',    COUNT(*) FROM staff\nUNION ALL SELECT 'customer', COUNT(*) FROM customer\nUNION ALL SELECT 'parcel',   COUNT(*) FROM parcel\nUNION ALL SELECT 'payment',  COUNT(*) FROM payment;\n\n-- The parcel_event table is NOT created here.\n-- Designing and creating it is Question A2. Read the scenario first.\n-- =====================================================================\n"</script>
+<script>
+/* ================= data ================= */
+/* Paste your Apps Script /exec URL between the quotes. Leave it empty and the
+   Submit button simply does not appear, and students hand in the exported file. */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbxndoFnE1Rp4Wmwb-2MFEQ-ADy6e6oFG9pyVDOnjk5mqhFz0Qj5czMgruVjKEpuAgbt/exec";
+
+/* Must match DEADLINE in Code.gs. The server is what actually enforces it; this only
+   drives the countdown students see, and a student's clock can be wrong or changed.
+   Wednesday 9 September 2026, 00:00 Dhaka time. */
+const DEADLINE = new Date("2026-09-09T00:00:00+06:00");
+
+const SEED_TEMPLATE = JSON.parse(document.getElementById('seedjson').textContent);
+
+const QUESTIONS = [
+ {id:"A1",part:"A",m:1,t:"Write <b>one single query</b> that outputs a table with two columns, <code>table_name</code> and <code>rows_loaded</code>, listing all five seeded tables and their row counts."},
+ {id:"A2",part:"A",m:2,t:"Create the <code>parcel_event</code> table described in the scenario. It needs a surrogate primary key that generates itself, a column that cannot hold anything outside the five scan types, a moment-in-time column that fills itself with the current timestamp, exactly one column allowed to be NULL, and both foreign keys."},
+ {id:"A3",part:"A",m:1,t:"Insert exactly <b>{A3ROWS}</b> rows into <code>parcel_event</code>, covering at least three different parcels and at least three different scan types, with at least one row leaving the remark empty. Then add a column recording which staff member performed each scan, with the right foreign key, and fill it in for at least two rows."},
+
+ {id:"B1",part:"B",m:0.5,t:"List <code>tracking_code</code>, <code>weight_kg</code> and <code>service_type</code> for every parcel heavier than <b>{QP2}</b> kg. Heaviest first, at most 5 rows."},
+ {id:"B2",part:"B",m:0.5,t:"For every staff member hired before 1 January 2021, show the name in upper case, the role, the hiring date, and completed years of service as of 31 December 2025. Use a date function."},
+ {id:"B3",part:"B",m:0.5,t:"List name, phone and city of all Retail customers whose phone begins with <code>017</code> or <code>018</code>. Sort by city, then name."},
+ {id:"B4",part:"B",m:0.5,t:"List <code>tracking_code</code>, <code>status</code> and <code>booked_on</code> for every parcel not yet delivered, plus how many days it has been pending as of 31 December 2024."},
+ {id:"B5",part:"B",m:0.5,t:"Produce the distinct city and customer-type combinations in <code>customer</code>, sorted by city then type. No duplicates."},
+ {id:"B6",part:"B",m:0.5,t:"For every staff member show name, salary, the bonus percentage shown as <code>0.00</code> when missing, and <code>total_pay</code> = salary + (salary × bonus ÷ 100), rounded to 2 places. Highest total pay first."},
+
+ {id:"C1",part:"C",m:0.5,t:"How many parcels are in each <code>status</code>? Largest group first."},
+ {id:"C2",part:"C",m:0.5,t:"For each origin branch: number of parcels, average declared value rounded to 2 places, and total weight shipped."},
+ {id:"C3",part:"C",m:0.75,t:"For each service type: minimum weight, maximum weight, and <code>value_spread</code> = highest declared value minus lowest."},
+ {id:"C4",part:"C",m:0.75,t:"For each branch: headcount and average salary rounded to 2 places, but only branches employing <b>at least {R}</b> staff."},
+ {id:"C5",part:"C",m:0.75,t:"Booking activity by calendar month: year, month, parcels booked, total declared value. Only months with more than 3 bookings. Chronological."},
+ {id:"C6",part:"C",m:0.75,t:"For each payment method: times used, total amount, average amount rounded to 2 places. Exclude any method used only once. Highest total first."},
+
+ {id:"D1",part:"D",m:0.5,t:"For every delivered parcel, show the tracking code, the customer's name and the customer's city. Sorted by customer name."},
+ {id:"D2",part:"D",m:0.75,t:"Show <b>every</b> branch with its staff headcount, including any branch employing nobody, which must appear with a count of 0."},
+ {id:"D3",part:"D",m:0.75,t:"Find the parcels with no payment recorded. Show tracking code, status and declared value. Solve it with a join, not <code>NOT IN</code>."},
+ {id:"D4",part:"D",m:1,t:"Show each staff member's name and role next to their supervisor's name. Staff with no supervisor must still appear, with <code>No Supervisor</code> in place of the name. Sort by supervisor name.",ex:"In two sentences: why does an inner join give the wrong answer here?"},
+ {id:"D5",part:"D",m:1,t:"For every Express parcel, show the tracking code, the origin hub name and city, and the destination hub name and city, but only where the two cities differ."},
+ {id:"D6",part:"D",m:1,t:"Join branch, staff and parcel. For every staff member who handled at least one parcel: branch name, staff name, parcels handled, total declared value handled. Busiest first."},
+
+ {id:"E1",part:"E",m:0.5,t:"List the staff earning more than the average salary of the whole company. Show name, role and salary."},
+ {id:"E2",part:"E",m:0.5,t:"List the customers who have booked at least one Express parcel. Use a subquery with <code>IN</code>, not a join."},
+ {id:"E3",part:"E",m:0.75,t:"List the customers who have never booked a single parcel. Use <code>NOT EXISTS</code>."},
+ {id:"E4",part:"E",m:0.75,t:"List the staff earning more than the average salary <i>of their own branch</i>. Show name, branch id, salary, and a fourth column holding that branch's average salary.",ex:"In two sentences: what makes this subquery correlated?"},
+ {id:"E5",part:"E",m:0.75,t:"Using a subquery in the <code>FROM</code> clause, compute average parcel weight per origin branch, then return only branches whose average is above the company-wide average parcel weight."},
+ {id:"E6",part:"E",m:0.75,t:"For each origin branch, find the parcel with the highest declared value. Show branch name, tracking code and declared value. If a branch ties, show both rows.",ex:"In two sentences: how does your query handle the tie?"}
+];
+
+const PARTS = {
+  A:{name:"Setup and schema design",marks:4,tint:"var(--lav)"},
+  B:{name:"Single-table retrieval",marks:3,tint:"var(--sky)"},
+  C:{name:"Grouping and aggregation",marks:4,tint:"var(--mint)"},
+  D:{name:"Join operations",marks:5,tint:"var(--blush)"},
+  E:{name:"Subqueries",marks:4,tint:"var(--butter)"}
+};
+
+/* ================= state ================= */
+let S = null;          // {name,id,P,Q,R,T,db}
+let ANS = {};          // {A1:"...", "D4_ex":"..."}
+let storageOK = true;
+
+function store(k,v){ try{ localStorage.setItem(k,v); }catch(e){ storageOK=false; } }
+function load(k){ try{ return localStorage.getItem(k); }catch(e){ storageOK=false; return null; } }
+
+/* ================= gate ================= */
+const $ = s => document.querySelector(s);
+["s1","s2","s3"].forEach(id=>{
+  $("#"+id).addEventListener("input",e=>{
+    e.target.value = e.target.value.replace(/\D/g,"");
+    const max = e.target.maxLength;
+    if(e.target.value.length===max){
+      const nxt = {s1:"s2",s2:"s3"}[id];
+      if(nxt) $("#"+nxt).focus();
+    }
+  });
+});
+
+function computeParams(full){
+  const P = parseInt(full.slice(8,10),10);
+  const Q = parseInt(full.slice(9,10),10);
+  const R = (Q%3)+2;
+  const T = full.slice(6,10).split("").reduce((a,d)=>a+ +d,0);
+  return {P,Q,R,T};
+}
+
+let staged=false;
+$("#go").addEventListener("click",()=>{
+  if(staged){ startApp(); return; }
+  const name = $("#nm").value.trim();
+  const a=$("#s1").value, b=$("#s2").value, c=$("#s3").value;
+  const err=$("#gerr");
+  if(name.length<3){ err.textContent="Enter your full name as it appears on the class roll."; $("#nm").focus(); return; }
+  if(a.length!==3||b.length!==3||c.length!==4){ err.textContent="The ID needs 3 digits, then 3 digits, then 4 digits. Example: 011 223 0123."; return; }
+  err.textContent="";
+  const full = a+b+c;
+  const p = computeParams(full);
+  S = {name, id:full, db:"dc_"+c, ...p};
+
+  const cells=[["P","last two digits",p.P],["Q","last digit",p.Q],["R","(Q mod 3) + 2",p.R],["T","sum of last four",p.T]];
+  $("#revealBox").innerHTML = '<div class="reveal">' + cells.map(([k,d,v],i)=>
+    `<div class="pcell" style="background:${["var(--blush)","var(--butter)","var(--mint)","var(--sky)"][i]}">
+       <b>${k}</b><span>${d}</span><em>${v}</em></div>`).join("") + "</div>";
+  [...document.querySelectorAll(".pcell")].forEach((el,i)=>
+    setTimeout(()=>el.classList.add("show"), 90*i));
+
+  staged = true;
+  $("#clr").style.display="inline-block";
+  $("#go").textContent="Open my assignment";
+});
+
+/* editing the ID or name un-stages, so the parameters can never go stale */
+["nm","s1","s2","s3"].forEach(id=>$("#"+id).addEventListener("input",()=>{
+  if(!staged) return;
+  staged=false;
+  $("#go").textContent="Build my assignment";
+  $("#revealBox").innerHTML="";
+}));
+$("#clr").addEventListener("click",()=>{ try{localStorage.clear();}catch(e){} location.reload(); });
+
+/* ================= app ================= */
+function subst(str){
+  return str.replace(/\{P\}/g,S.P).replace(/\{Q\}/g,S.Q).replace(/\{R\}/g,S.R)
+            .replace(/\{T\}/g,S.T).replace(/\{QP2\}/g,S.Q+2).replace(/\{A3ROWS\}/g,5+S.Q)
+            .replace(/\{DB\}/g,S.db).replace(/\{ID\}/g,S.id);
+}
+
+function startApp(){
+  store("dc_student", JSON.stringify(S));
+  const saved = load("dc_answers_"+S.id);
+  if(saved){ try{ ANS = JSON.parse(saved); }catch(e){ ANS={}; } }
+
+  $("#gate").style.display="none";
+  $("#app").style.display="block";
+  if(!storageOK) $("#storeWarn").style.display="block";
+
+  $("#tName").textContent = S.name;
+  $("#tId").textContent = S.id + "  ·  " + S.db;
+  $("#tParams").innerHTML = ["P","Q","R","T"].map(k=>`<span class="pk">${k} ${S[k]}</span>`).join("");
+
+  if(ENDPOINT) $("#submitBtn").style.display="inline-block";
+  renderSetup();
+  renderQuestions();
+  renderRail();
+  updateProgress();
+  tick();
+  setInterval(tick, 30000);
+}
+
+function renderSetup(){
+  $("#main").innerHTML = `
+  <div class="panel">
+    <h3>Before you write a single query</h3>
+    <p>Your starter file already has your ID inside it and creates <code>${S.db}</code> for you.
+       Download it, run it in MySQL Workbench, and check the row counts.</p>
+    <ol class="steps">
+      <li>Download the starter SQL below and open it in MySQL Workbench.</li>
+      <li>Run the whole file, top to bottom, once.</li>
+      <li>The last query must report <code>6, 14, 12, 28, 20</code>. If not, drop the database and run it again.</li>
+      <li>Screenshot the <code>SELECT @SID, @P, @Q, @R, @T</code> output. That is your first screenshot.</li>
+      <li>Answer the questions below, testing each query in Workbench before you paste it here.</li>
+      <li>${ENDPOINT ? "Press <b>Submit to instructor</b> and keep the receipt code you are given." : "Press <b>Save a copy</b> and upload the file where your teacher asked."}</li>
+    </ol>
+    <div class="actions">
+      <button class="btn" id="seedBtn">Download starter SQL</button>
+    </div>
+    <div class="tip blush">
+      <b>Due ${deadlineText()}.</b> The page stops sending submissions at that moment.
+      Submit early; you can submit again as many times as you like before it closes,
+      and only your latest attempt is marked.
+    </div>
+    <div class="tip butter">
+      Your numbers are yours. Salaries, weights, dates, phone numbers and tracking codes all come
+      from ${S.id}. A query copied from someone else produces the wrong output on your screen, which
+      is why copied answers score zero.
+    </div>
+  </div>`;
+}
+
+function qCard(q){
+  const tint = PARTS[q.part].tint;
+  const ex = q.ex ? `<div class="explain">
+      <textarea data-k="${q.id}_ex" placeholder="${q.ex}"></textarea></div>` : "";
+  return `<div class="q" id="q_${q.id}">
+    <div class="qhead">
+      <span class="qid" style="background:${tint}">${q.id}</span>
+      <div class="qtext">${subst(q.t)}${q.ex?`<p class="qnote">${q.ex}</p>`:""}</div>
+      <span class="qmk">${q.m}</span>
+    </div>
+    <div class="qbody">
+      <textarea data-k="${q.id}" spellcheck="false" placeholder="Your SQL for ${q.id}"></textarea>
+      ${ex}
+    </div>
+  </div>`;
+}
+
+function renderQuestions(){
+  let html = "";
+  for(const p of ["A","B","C","D","E"]){
+    const info = PARTS[p];
+    html += `<section class="block" id="part_${p}">
+      <h2 class="part">Part ${p} · ${info.name}</h2>
+      <p class="partmeta">${info.marks} marks</p>
+      ${QUESTIONS.filter(q=>q.part===p).map(qCard).join("")}
+    </section>`;
+  }
+  $("#main").insertAdjacentHTML("beforeend", html);
+
+  document.querySelectorAll("textarea[data-k]").forEach(ta=>{
+    const k = ta.dataset.k;
+    if(ANS[k]) ta.value = ANS[k];
+    autosize(ta);
+    ta.addEventListener("input",()=>{
+      ANS[k] = ta.value;
+      autosize(ta);
+      queueSave();
+      updateProgress();
+    });
+  });
+  $("#seedBtn").addEventListener("click", downloadSeed);
+}
+
+function autosize(ta){
+  ta.style.height="auto";
+  ta.style.height = Math.max(ta.dataset.k.endsWith("_ex")?60:96, ta.scrollHeight+2) + "px";
+}
+
+function renderRail(){
+  $("#rail").innerHTML = ["A","B","C","D","E"].map(p=>`
+    <div class="railpart">
+      <h4>Part ${p}</h4>
+      <div class="chips">${QUESTIONS.filter(q=>q.part===p).map(q=>
+        `<button class="chip" data-q="${q.id}">${q.id}</button>`).join("")}</div>
+    </div>`).join("");
+  $("#rail").addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    const el=document.getElementById("q_"+b.dataset.q);
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    el.querySelector("textarea").focus({preventScroll:true});
+  });
+}
+
+let saveTimer=null;
+function queueSave(){
+  clearTimeout(saveTimer);
+  $("#savedTag").textContent="";
+  saveTimer=setTimeout(()=>{
+    store("dc_answers_"+S.id, JSON.stringify(ANS));
+    $("#savedTag").textContent = storageOK ? "Saved" : "";
+    if(!storageOK) $("#storeWarn").style.display="block";
+  },500);
+}
+
+function updateProgress(){
+  const done = QUESTIONS.filter(q=>(ANS[q.id]||"").trim().length>8).length;
+  $("#pTxt").textContent = done + " of 27";
+  $("#pBar").style.width = (done/27*100).toFixed(1)+"%";
+  document.querySelectorAll(".chip").forEach(c=>{
+    c.classList.toggle("done", (ANS[c.dataset.q]||"").trim().length>8);
+  });
+  const missingEx = ["D4","E4","E6"].filter(k=>!(ANS[k+"_ex"]||"").trim());
+  const finish = ENDPOINT ? "Submit when you are ready." : "Save your copy and upload it.";
+  $("#dockMsg").textContent = done<27
+    ? `${27-done} question${done===26?"":"s"} still empty.`
+    : missingEx.length
+      ? `All 27 answered. Still missing the explanation for ${missingEx.join(", ")}.`
+      : "All 27 answered and all three explanations written. " + finish;
+}
+
+/* ================= downloads ================= */
+function saveFile(name, text){
+  const b = new Blob([text],{type:"text/plain;charset=utf-8"});
+  const u = URL.createObjectURL(b);
+  const a = Object.assign(document.createElement("a"),{href:u,download:name});
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500);
+}
+
+function downloadSeed(){
+  let sql = SEED_TEMPLATE
+    .replace("-- CREATE DATABASE dc_0123;", "CREATE DATABASE "+S.db+";")
+    .replace("-- USE dc_0123;", "USE "+S.db+";")
+    .replace("SET @SID = '0112230123';", "SET @SID = '"+S.id+"';");
+  sql = "-- Generated for "+S.name+"  ("+S.id+")\n"
+      + "-- Database: "+S.db+"    P="+S.P+"  Q="+S.Q+"  R="+S.R+"  T="+S.T+"\n"
+      + "-- Generated "+new Date().toISOString().slice(0,16).replace("T"," ")+"\n\n" + sql;
+  saveFile("seed_"+S.id+".sql", sql);
+}
+
+function fingerprint(str){
+  let h1=0x811c9dc5, h2=0x01000193;
+  for(let i=0;i<str.length;i++){
+    h1 = ((h1 ^ str.charCodeAt(i)) * 16777619) >>> 0;
+    h2 = ((h2 + str.charCodeAt(i)*(i+7)) * 2654435761) >>> 0;
+  }
+  return (h1.toString(36)+h2.toString(36)).toUpperCase().slice(0,12);
+}
+
+function exportSubmission(silent){
+  const done = QUESTIONS.filter(q=>(ANS[q.id]||"").trim().length>8).length;
+  if(silent!==true && done<27 && !confirm((27-done)+" questions are still empty. Save anyway?")) return;
+
+  const L=[];
+  L.push("-- =====================================================================");
+  L.push("--  CSE 3522  Database Management Systems Laboratory");
+  L.push("--  Mid-term assignment submission");
+  L.push("--");
+  L.push("--  Name        : "+S.name);
+  L.push("--  Student ID  : "+S.id);
+  L.push("--  Database    : "+S.db);
+  L.push("--  Parameters  : P="+S.P+"  Q="+S.Q+"  R="+S.R+"  T="+S.T);
+  L.push("--  Exported    : "+new Date().toString());
+  L.push("--  Answered    : "+done+" of 27");
+  L.push("--  Due          : "+deadlineText());
+  L.push("--  Fingerprint : "+fingerprint(S.id+JSON.stringify(ANS)));
+  L.push("-- =====================================================================");
+  L.push("");
+  L.push("USE "+S.db+";");
+  L.push("");
+
+  for(const p of ["A","B","C","D","E"]){
+    L.push("");
+    L.push("-- ---------------------------------------------------------------------");
+    L.push("--  PART "+p+"  "+PARTS[p].name+"   ("+PARTS[p].marks+" marks)");
+    L.push("-- ---------------------------------------------------------------------");
+    for(const q of QUESTIONS.filter(x=>x.part===p)){
+      L.push("");
+      L.push("-- "+q.id+"  ["+q.m+" mark"+(q.m===1?"":"s")+"]");
+      const a=(ANS[q.id]||"").trim();
+      L.push(a || "-- NOT ANSWERED");
+      if(q.ex){
+        const e=(ANS[q.id+"_ex"]||"").trim();
+        L.push("/* Explanation ("+q.id+"): "+(e||"NOT WRITTEN")+" */");
+      }
+    }
+  }
+  L.push("");
+  L.push("-- End of submission. Upload this file together with your PDF of screenshots.");
+  saveFile("CSE3522_"+S.id+"_Mid.sql", L.join("\n"));
+}
+
+let shut = false;
+
+function deadlineText(){
+  return DEADLINE.toLocaleString(undefined,{weekday:"long",day:"numeric",month:"long",
+    hour:"2-digit",minute:"2-digit"});
+}
+
+function tick(){
+  const el = $("#clock");
+  const left = DEADLINE - Date.now();
+
+  if(left <= 0){
+    if(!shut) closeSubmissions();
+    el.className = "clock shut";
+    el.innerHTML = "<b>Closed</b>";
+    return;
+  }
+  const m = Math.floor(left/60000), h = Math.floor(m/60), d = Math.floor(h/24);
+  el.className = "clock" + (left < 3600000 ? " urgent" : left < 21600000 ? " soon" : "");
+  el.innerHTML = "Closes in <b>" +
+    (d>0 ? d+"d "+(h%24)+"h" : h>0 ? h+"h "+(m%60)+"m" : m+"m") + "</b>";
+}
+
+function closeSubmissions(){
+  shut = true;
+  const b = $("#submitBtn");
+  if(b){ b.disabled = true; b.textContent = "Submission closed"; }
+  $("#dockMsg").textContent = "Submission closed on " + deadlineText() +
+    ". Save a copy and email your instructor.";
+  if(!document.getElementById("shutBanner")){
+    const bar = document.createElement("div");
+    bar.id = "shutBanner"; bar.className = "banner";
+    bar.textContent = "Submission closed on " + deadlineText() +
+      ". You can still write and save a copy, but the page will not send it.";
+    $("#app").insertBefore(bar, $("#app").firstChild);
+  }
+}
+
+function submitPayload(){
+  const done = QUESTIONS.filter(q=>(ANS[q.id]||"").trim().length>8).length;
+  return {done, body:{
+    name:S.name, id:S.id, db:S.db, P:S.P, Q:S.Q, R:S.R, T:S.T,
+    answered:done, fingerprint:fingerprint(S.id+JSON.stringify(ANS)),
+    answers:ANS, client:new Date().toString(),
+    ua:(navigator.userAgent||"").slice(0,120)
+  }};
+}
+
+/* Used when the browser blocks the direct request. A form post into a hidden
+   frame always goes through, but the reply cannot be read back. */
+function blindPost(body){
+  let f = document.getElementById("blindFrame");
+  if(!f){
+    f = Object.assign(document.createElement("iframe"),{id:"blindFrame",name:"blindFrame"});
+    f.style.display="none"; document.body.appendChild(f);
+  }
+  const form = document.createElement("form");
+  form.method="POST"; form.action=ENDPOINT; form.target="blindFrame"; form.style.display="none";
+  const inp = document.createElement("input");
+  inp.type="hidden"; inp.name="payload"; inp.value=JSON.stringify(body);
+  form.appendChild(inp); document.body.appendChild(form); form.submit();
+  setTimeout(()=>form.remove(), 4000);
+}
+
+function showReceipt(code, attempt, blind){
+  const box = document.createElement("div");
+  box.className = "receipt";
+  box.innerHTML = blind
+    ? `<h3>Sent</h3>
+       <p>Your answers were sent, but this browser would not let the page read the reply,
+          so there is no receipt number. Keep the downloaded file as your proof and upload
+          it as well.</p>`
+    : `<h3>Submitted</h3>
+       <span class="code">${code}</span>
+       <p>That is your receipt${attempt>1?` for attempt ${attempt}`:""}. Screenshot it.
+          A copy of your answers has also downloaded. Submitting again replaces this one;
+          your teacher marks your latest attempt.</p>`;
+  const main = $("#main");
+  main.insertBefore(box, main.firstChild);
+  box.scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+async function submitToInstructor(){
+  if(shut || Date.now() > DEADLINE){ closeSubmissions(); return; }
+  const {done, body} = submitPayload();
+  if(done<27 && !confirm((27-done)+" questions are still empty. Submit anyway? You can submit again later.")) return;
+
+  const btn=$("#submitBtn"); const label=btn.textContent;
+  btn.disabled=true; btn.textContent="Sending";
+
+  exportSubmission(true);   // they always keep their own copy
+
+  try{
+    const res = await fetch(ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(body),
+      redirect:"follow"
+    });
+    const out = await res.json();
+    if(out.closed){ closeSubmissions(); alert(out.error); return; }
+    if(!out.ok) throw new Error(out.error||"rejected");
+    showReceipt(out.receipt, out.attempt, false);
+  }catch(err){
+    blindPost(body);
+    showReceipt(null, null, true);
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
+}
+
+$("#exportBtn").addEventListener("click", exportSubmission);
+$("#exportBtn2").addEventListener("click", exportSubmission);
+$("#seedBtn2").addEventListener("click", downloadSeed);
+$("#submitBtn").addEventListener("click", submitToInstructor);
+
+window.addEventListener("beforeunload",e=>{
+  if(S && Object.keys(ANS).length){ e.preventDefault(); e.returnValue=""; }
+});
+
+/* resume a previous session */
+(function resume(){
+  const raw = load("dc_student");
+  if(!raw) return;
+  try{
+    const prev = JSON.parse(raw);
+    $("#nm").value = prev.name;
+    $("#s1").value = prev.id.slice(0,3);
+    $("#s2").value = prev.id.slice(3,6);
+    $("#s3").value = prev.id.slice(6,10);
+    $("#gerr").textContent = "";
+    $("#gerr").textContent = "";
+    $("#nm").insertAdjacentHTML("afterend",'<p style="font-size:13px;color:var(--mid);margin:8px 0 0">Answers saved on this computer for this ID will load automatically.</p>');
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
