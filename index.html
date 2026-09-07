@@ -145,6 +145,21 @@ ol.steps code{font-family:var(--mono);font-size:13px;background:#F3F3FA;border-r
 .tip{border-radius:11px;padding:14px 17px;font-size:14px;margin-top:16px}
 .tip.butter{background:var(--butter)} .tip.blush{background:var(--blush)}
 .tip.mintish{background:var(--mint)}
+.story h3{margin-top:2px}
+.story .lead{font-size:15px;color:#3A3C52;max-width:76ch}
+.story .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px}
+@media(max-width:760px){.story .cols{grid-template-columns:1fr}}
+.story p.body{font-size:14px;color:#4A4C60;max-width:70ch;margin:0 0 12px}
+.quote{border-left:4px solid #E6C55C;background:var(--butter);border-radius:0 11px 11px 0;padding:16px 20px;margin:6px 0 4px;font-size:14px;color:#5F4C12;max-width:78ch}
+.quote b{color:#4A3B0C}
+.cluegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+@media(max-width:620px){.cluegrid{grid-template-columns:1fr}}
+.clue{background:#F6F6FB;border:1px solid var(--rule);border-radius:9px;padding:10px 13px;font-size:13px}
+.clue i{font-style:italic;color:var(--muted);display:block;margin-bottom:3px}
+.clue b{color:var(--deep);font-family:var(--mono);font-size:12.5px}
+.enums{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.enum{background:#fff;border:1px solid var(--rule);border-radius:7px;padding:5px 11px;font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.enum b{color:var(--deep)}
 .explorer{display:grid;grid-template-columns:212px 1fr;gap:0;border:1px solid var(--rule);border-radius:12px;overflow:hidden}
 @media(max-width:760px){.explorer{grid-template-columns:1fr}}
 .tree{background:#F6F6FB;border-right:1px solid var(--rule);padding:14px 12px}
@@ -413,6 +428,7 @@ function startApp(){
 
   if(ENDPOINT) $("#submitBtn").style.display="inline-block";
   renderSetup();
+  renderScenario();
   renderDataPanel();
   renderQuestions();
   renderRail();
@@ -619,6 +635,58 @@ function qCard(q){
       ${ex}
     </div>
   </div>`;
+}
+
+function renderScenario(){
+  $("#main").insertAdjacentHTML("beforeend", `
+  <div class="panel story" id="scenarioPanel">
+    <h3>The scenario &middot; DrutoCourier Ltd.</h3>
+    <p class="lead">Read this before you start. Every question is about this company, and one
+       question asks you to design a table from it.</p>
+    <div class="cols" style="margin-top:16px">
+      <div>
+        <p class="body"><b>DrutoCourier Ltd.</b> moves parcels between six hubs across Bangladesh.
+           A customer walks into a hub, books a parcel and declares its value. The parcel gets a
+           tracking code, an origin hub, a destination hub, and a service level: Express, Standard
+           or Economy. A staff member may be put in charge of it, or it may sit unassigned.
+           Eventually it is delivered, returned, or still moving.</p>
+        <p class="body">Staff belong to a hub and report to a supervisor, except the Operations
+           Head, who reports to nobody. Some contracts include a bonus percentage and some do not.</p>
+      </div>
+      <div>
+        <p class="body">Customers are Retail or Corporate, and many joined because an existing
+           customer referred them. Payment is collected for most parcels, by bKash, Nagad, Rocket,
+           Card or Cash, but the accounts team is behind and several parcels have no payment row
+           at all.</p>
+        <p class="body" style="margin-bottom:6px">The allowed values you will rely on:</p>
+        <div class="enums"><span class="enum"><b>status</b> Delivered, In Transit, Pending, Returned</span></div>
+        <div class="enums" style="margin-top:6px">
+          <span class="enum"><b>service_type</b> Express, Standard, Economy</span>
+          <span class="enum"><b>cust_type</b> Retail, Corporate</span>
+        </div>
+      </div>
+    </div>
+    <h3 style="margin-top:22px;font-size:17px">The table you design &middot; Question A2</h3>
+    <p class="body">Five tables arrive seeded. The sixth, <code>parcel_event</code>, does not exist
+       yet. You build it from what head office tells you below. Every design decision is hidden in
+       this paragraph, so read it closely.</p>
+    <div class="quote">&ldquo;Every time a parcel changes hands we record it. A scan always happens
+       at one of our hubs, at a precise moment in time, and it says what happened to the parcel: it
+       was received at the hub, loaded onto a van, sent out for delivery, a delivery attempt failed,
+       or it was delivered. Nothing else counts as a scan type. The rider can add a short remark,
+       for example <i>receiver's phone was off</i>, but usually types nothing. We need to be able to
+       ask: what was the most recent scan on this parcel, and how many failed attempts did each hub
+       record. Obviously a scan cannot exist for a parcel we never booked, and it cannot point at a
+       hub that is not ours.&rdquo;</div>
+    <div class="cluegrid">
+      <div class="clue"><i>&ldquo;at one of our hubs&rdquo;</i><b>&rarr; foreign key to branch</b></div>
+      <div class="clue"><i>&ldquo;for a parcel we never booked&rdquo;</i><b>&rarr; foreign key to parcel</b></div>
+      <div class="clue"><i>&ldquo;nothing else counts&rdquo;</i><b>&rarr; ENUM or CHECK on the type</b></div>
+      <div class="clue"><i>&ldquo;a precise moment in time&rdquo;</i><b>&rarr; DATETIME, default now</b></div>
+      <div class="clue"><i>&ldquo;usually types nothing&rdquo;</i><b>&rarr; the one nullable column</b></div>
+      <div class="clue"><i>every scan is one event</i><b>&rarr; surrogate key, auto-increment</b></div>
+    </div>
+  </div>`);
 }
 
 function renderQuestions(){
