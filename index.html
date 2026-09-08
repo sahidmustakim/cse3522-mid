@@ -293,10 +293,15 @@ table.data td.key{color:var(--deep);font-weight:700}
    Submit button simply does not appear, and students hand in the exported file. */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbxndoFnE1Rp4Wmwb-2MFEQ-ADy6e6oFG9pyVDOnjk5mqhFz0Qj5czMgruVjKEpuAgbt/exec";
 
-/* Must match DEADLINE in Code.gs. The server is what actually enforces it; this only
-   drives the countdown students see, and a student's clock can be wrong or changed.
-   Wednesday 9 September 2026, 00:00 Dhaka time. */
+/* Must match DEADLINE / GRACE_MS in Code.gs. The server is what actually enforces it;
+   this only drives the countdown students see, and a student's clock can be wrong or
+   changed. Wednesday 9 September 2026, 00:00 Dhaka time. */
 const DEADLINE = new Date("2026-09-09T00:00:00+06:00");
+
+/* On-time cutoff is DEADLINE. Submissions still go through for GRACE_MS after it, but
+   they are flagged late. HARD_DEADLINE is when the page truly stops sending. */
+const GRACE_MS = 3 * 60 * 60 * 1000;            // 3 hours
+const HARD_DEADLINE = new Date(DEADLINE.getTime() + GRACE_MS);
 
 const SEED_TEMPLATE = JSON.parse(document.getElementById('seedjson').textContent);
 const DATASET = JSON.parse(document.getElementById('datajson').textContent);
@@ -603,9 +608,10 @@ function renderSetup(){
       <button class="btn" id="seedBtn">Download starter SQL</button>
     </div>
     <div class="tip blush">
-      <b>Due ${deadlineText()}.</b> The page stops sending submissions at that moment.
-      Submit early; you can submit again as many times as you like before it closes,
-      and only your latest attempt is marked.
+      <b>Due ${deadlineText()}.</b> Submissions after that are still accepted until
+      ${hardDeadlineText()}, but are recorded as <b>late</b>; the page stops sending at
+      that later moment. Submit early; you can submit again as many times as you like
+      before it closes, and only your latest attempt is marked.
     </div>
     <div class="tip mintish">
       Your typing is saved in this browser only, not on any server. On a lab or shared
@@ -807,6 +813,8 @@ function exportSubmission(silent){
   L.push("--  Exported    : "+new Date().toString());
   L.push("--  Answered    : "+done+" of 27");
   L.push("--  Due          : "+deadlineText());
+  L.push("--  Late cutoff  : "+hardDeadlineText());
+  L.push("--  Status       : "+(Date.now() > DEADLINE ? "LATE" : "on time"));
   L.push("--  Fingerprint : "+fingerprint(S.id+JSON.stringify(ANS)));
   L.push("-- =====================================================================");
   L.push("");
@@ -841,16 +849,33 @@ function deadlineText(){
     hour:"2-digit",minute:"2-digit"});
 }
 
+function hardDeadlineText(){
+  return HARD_DEADLINE.toLocaleString(undefined,{weekday:"long",day:"numeric",month:"long",
+    hour:"2-digit",minute:"2-digit"});
+}
+
 function tick(){
   const el = $("#clock");
-  const left = DEADLINE - Date.now();
+  const now = Date.now();
+  const hardLeft = HARD_DEADLINE - now;
 
-  if(left <= 0){
+  if(hardLeft <= 0){
     if(!shut) closeSubmissions();
     el.className = "clock shut";
     el.innerHTML = "<b>Closed</b>";
     return;
   }
+
+  // Past the on-time cutoff but still inside the grace window: still sending, marked late.
+  if(now > DEADLINE){
+    const m = Math.floor(hardLeft/60000), h = Math.floor(m/60);
+    el.className = "clock urgent";
+    el.innerHTML = "Late window &middot; closes in <b>" +
+      (h>0 ? h+"h "+(m%60)+"m" : m+"m") + "</b>";
+    return;
+  }
+
+  const left = DEADLINE - now;
   const m = Math.floor(left/60000), h = Math.floor(m/60), d = Math.floor(h/24);
   el.className = "clock" + (left < 3600000 ? " urgent" : left < 21600000 ? " soon" : "");
   el.innerHTML = "Closes in <b>" +
@@ -861,12 +886,12 @@ function closeSubmissions(){
   shut = true;
   const b = $("#submitBtn");
   if(b){ b.disabled = true; b.textContent = "Submission closed"; }
-  $("#dockMsg").textContent = "Submission closed on " + deadlineText() +
+  $("#dockMsg").textContent = "Submission closed on " + hardDeadlineText() +
     ". Save a copy and email your instructor.";
   if(!document.getElementById("shutBanner")){
     const bar = document.createElement("div");
     bar.id = "shutBanner"; bar.className = "banner";
-    bar.textContent = "Submission closed on " + deadlineText() +
+    bar.textContent = "Submission closed on " + hardDeadlineText() +
       ". You can still write and save a copy, but the page will not send it.";
     $("#app").insertBefore(bar, $("#app").firstChild);
   }
@@ -874,10 +899,11 @@ function closeSubmissions(){
 
 function submitPayload(){
   const done = QUESTIONS.filter(q=>(ANS[q.id]||"").trim().length>8).length;
-  return {done, body:{
+  const late = Date.now() > DEADLINE;
+  return {done, late, body:{
     name:S.name, id:S.id, db:S.db, P:S.P, Q:S.Q, R:S.R, T:S.T,
     answered:done, fingerprint:fingerprint(S.id+JSON.stringify(ANS)),
-    answers:ANS, client:new Date().toString(),
+    answers:ANS, client:new Date().toString(), late,
     ua:(navigator.userAgent||"").slice(0,120)
   }};
 }
@@ -898,15 +924,18 @@ function blindPost(body){
   setTimeout(()=>form.remove(), 4000);
 }
 
-function showReceipt(code, attempt, blind){
+function showReceipt(code, attempt, blind, late){
   const box = document.createElement("div");
   box.className = "receipt";
+  const lateNote = late
+    ? `<p style="color:var(--bad,#b42318);font-weight:600">Recorded as LATE — submitted after ${deadlineText()}.</p>`
+    : "";
   box.innerHTML = blind
-    ? `<h3>Sent</h3>
+    ? `<h3>Sent</h3>${lateNote}
        <p>Your answers were sent, but this browser would not let the page read the reply,
           so there is no receipt number. Keep the downloaded file as your proof and upload
           it as well.</p>`
-    : `<h3>Submitted</h3>
+    : `<h3>Submitted</h3>${lateNote}
        <span class="code">${code}</span>
        <p>That is your receipt${attempt>1?` for attempt ${attempt}`:""}. Screenshot it.
           A copy of your answers has also downloaded. Submitting again replaces this one;
@@ -917,8 +946,10 @@ function showReceipt(code, attempt, blind){
 }
 
 async function submitToInstructor(){
-  if(shut || Date.now() > DEADLINE){ closeSubmissions(); return; }
-  const {done, body} = submitPayload();
+  if(shut || Date.now() > HARD_DEADLINE){ closeSubmissions(); return; }
+  const {done, late, body} = submitPayload();
+  if(late && !confirm("The on-time deadline ("+deadlineText()+") has passed. "+
+      "This submission will be recorded as LATE. Submit anyway?")) return;
   if(done<27 && !confirm((27-done)+" questions are still empty. Submit anyway? You can submit again later.")) return;
 
   const btn=$("#submitBtn"); const label=btn.textContent;
@@ -936,10 +967,10 @@ async function submitToInstructor(){
     const out = await res.json();
     if(out.closed){ closeSubmissions(); alert(out.error); return; }
     if(!out.ok) throw new Error(out.error||"rejected");
-    showReceipt(out.receipt, out.attempt, false);
+    showReceipt(out.receipt, out.attempt, false, late);
   }catch(err){
     blindPost(body);
-    showReceipt(null, null, true);
+    showReceipt(null, null, true, late);
   }finally{
     btn.disabled=false; btn.textContent=label;
   }
